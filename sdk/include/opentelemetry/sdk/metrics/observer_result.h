@@ -10,6 +10,7 @@
 #include "opentelemetry/common/macros.h"
 #include "opentelemetry/metrics/observer_result.h"
 #include "opentelemetry/nostd/string_view.h"
+#include "opentelemetry/nostd/variant.h"
 #include "opentelemetry/sdk/metrics/state/attributes_hashmap.h"
 #include "opentelemetry/sdk/metrics/view/attributes_processor.h"
 #include "opentelemetry/version.h"
@@ -42,10 +43,15 @@ public:
     data_[MetricAttributes{{}, attributes_processor_}] = value;
   }
 #if OPENTELEMETRY_HAVE_EXCEPTIONS
-  catch (...)
+  catch (const std::bad_alloc &)
   {
     // Silently drop the measurement; per opentelemetry-cpp guidance (PR #3964),
     // exceptions in noexcept API/SDK code must not log or abort.
+    return;
+  }
+  catch (const opentelemetry::nostd::bad_variant_access &)
+  {
+    // AttributeValue variant in valueless_by_exception state; same drop policy.
     return;
   }
 #endif
@@ -59,10 +65,15 @@ public:
         value;  // overwrites the previous value if present
   }
 #if OPENTELEMETRY_HAVE_EXCEPTIONS
-  catch (...)
+  catch (const std::bad_alloc &)
   {
     // Silently drop the measurement; per opentelemetry-cpp guidance (PR #3964),
     // exceptions in noexcept API/SDK code must not log or abort.
+    return;
+  }
+  catch (const opentelemetry::nostd::bad_variant_access &)
+  {
+    // AttributeValue variant in valueless_by_exception state; same drop policy.
     return;
   }
 #endif
